@@ -4,22 +4,6 @@
 // used the BM8563 library by Tanaka Masayuki
 // as a reference implementation
 // https://www.arduino.cc/reference/en/libraries/i2c-bm8563-rtc/
-#define I2C_BM8563_DEFAULT_ADDRESS (bm8563::address)
-
-typedef struct
-{
-  int8_t hours;
-  int8_t minutes;
-  int8_t seconds;
-} I2C_BM8563_TimeTypeDef;
-
-typedef struct
-{
-  int8_t weekDay;
-  int8_t month;
-  int8_t date;
-  int16_t year;
-} I2C_BM8563_DateTypeDef;
 
 class bm8563 {
   public:
