@@ -10,6 +10,17 @@ using namespace arduino;
 using namespace esp_idf;
 #endif
 
+void bm8563::do_move(bm8563& rhs) {
+    m_i2c = rhs.m_i2c;
+    m_initialized = rhs.m_initialized;
+}
+bm8563::bm8563(bm8563&& rhs) {
+    do_move(rhs);
+}
+bm8563& bm8563::operator=(bm8563&& rhs) {
+    do_move(rhs);
+    return *this;
+}
 bm8563::bm8563(
 #ifdef ARDUINO
     TwoWire& i2c
