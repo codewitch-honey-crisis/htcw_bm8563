@@ -1,6 +1,6 @@
 {
     "name": "htcw_bm8563",
-    "version": "0.1.1",
+    "version": "0.1.2",
     "description": "Provides support for the BM8563 realtime clock",
     "keywords": ["rtc", "clock", "time", "date"],
     "authors": {
@@ -8,7 +8,7 @@
         "homepage": "https://www.codeproject.com/Members/code-witch"
     },
     "license": "MIT",
-    "frameworks": ["arduino"],
+    "frameworks": ["arduino","espidf"],
     "platforms": "*",
     "repository":
     {
