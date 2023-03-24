@@ -43,6 +43,9 @@ bool bm8563::initialize() {
 }
 
 bool bm8563::voltage_low() const {
+    if(!initialized()) {
+        return false;
+    }
     uint8_t data = reg(0x02);
     return data & 0x80;  // RTCC_VLSEC_MASK
 }
@@ -64,6 +67,9 @@ uint8_t bm8563::byte_to_bcd(uint8_t value) {
     return ((uint8_t)(bcdhigh << 4) | value);
 }
 void bm8563::now(tm* out_tm) const {
+    if(!initialized()) {
+        return;
+    }
     uint8_t buf[4] = {0};
 #ifdef ARDUINO
     m_i2c.beginTransmission(address);
@@ -135,6 +141,9 @@ void bm8563::now(tm* out_tm) const {
     out_tm->tm_isdst = -1;
 }
 time_t bm8563::now() const {
+    if(!initialized()) {
+        return (time_t)0;
+    }
     tm result;
     now(&result);
     return mktime(&result);
@@ -223,6 +232,9 @@ void bm8563::build(tm* out_tm) const {
     out_tm->tm_sec = sec;
 }
 void bm8563::set_alarm(int after_seconds) {
+    if(!initialize()) {
+        return;
+    }
     uint8_t reg_value = 0;
     reg_value = reg(0x01);
 
@@ -252,6 +264,9 @@ void bm8563::set_alarm(int after_seconds) {
     reg(0x01, reg_value);
 }
 void bm8563::set_alarm(const tm& alarm_tm) {
+    if(!initialize()) {
+        return;
+    }
     uint8_t out_buf[4] = {0x80, 0x80, 0x80, 0x80};
 
     out_buf[0] = byte_to_bcd(alarm_tm.tm_min) & 0x7f;
@@ -273,6 +288,9 @@ void bm8563::set_alarm(const tm& alarm_tm) {
     reg(0x01, reg_value);
 }
 void bm8563::dismiss_alarm() {
+    if(!initialize()) {
+        return;
+    }
     reg(0x01, reg(0x01) & 0xf3);
 }
 void bm8563::clear_alarm() {
