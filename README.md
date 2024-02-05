@@ -11,3 +11,20 @@ lib_deps =
 	codewitch-honey-crisis/htcw_bm8563
 lib_ldf_mode = deep
 ```
+
+```cpp
+#include <Arduino.h>
+#include <bm8563.h>
+using namespace arduino;
+bm8563 rtc;
+
+void setup() {
+    rtc.initialize();
+    // set the clock to the build time
+    rtc.set(rtc.build());
+    // get the time
+    time_t t = rtc.now();
+}
+loop() {
+}
+```
