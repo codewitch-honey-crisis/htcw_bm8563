@@ -25,6 +25,6 @@ void setup() {
     // get the time
     time_t t = rtc.now();
 }
-loop() {
+void loop() {
 }
 ```
