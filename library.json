@@ -1,6 +1,6 @@
 {
     "name": "htcw_bm8563",
-    "version": "0.1.5",
+    "version": "0.1.6",
     "description": "Provides support for the BM8563 realtime clock",
     "keywords": ["rtc", "clock", "time", "date"],
     "authors": {

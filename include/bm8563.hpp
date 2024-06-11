@@ -7,7 +7,12 @@ namespace arduino {
 #ifndef ESP_PLATFORM
 #error "This library requires the Arduino framework or an ESP32."
 #endif
+#include <esp_idf_version.h>
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 0)
+#include <driver/i2c_master.h>
+#else
 #include <driver/i2c.h>
+#endif
 #include <time.h>
 namespace esp_idf {
 #endif
@@ -20,7 +25,13 @@ class bm8563 {
 #ifdef ARDUINO
     TwoWire& m_i2c;
 #else
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 0)
+    i2c_master_bus_handle_t m_i2c_bus;
+    i2c_master_dev_handle_t m_i2c;
+#else
     i2c_port_t m_i2c;
+#endif
+
 #endif
   bool m_initialized;
   public:
@@ -29,7 +40,11 @@ class bm8563 {
 #ifdef ARDUINO
       TwoWire &i2c = Wire
 #else
-      i2c_port_t i2c = I2C_NUM_0
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 0)
+        i2c_master_bus_handle_t i2c
+#else
+        i2c_port_t i2c = I2C_NUM_0
+#endif
 #endif
       );
     bm8563(bm8563&& rhs);

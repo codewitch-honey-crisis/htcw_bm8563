@@ -1,4 +1,4 @@
-#include "bm8563.hpp"
+#include <bm8563.hpp>
 #ifdef ARDUINO
 using namespace arduino;
 #else
@@ -25,9 +25,20 @@ bm8563::bm8563(
 #ifdef ARDUINO
     TwoWire& i2c
 #else
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 0)
+    i2c_master_bus_handle_t i2c
+#else
     i2c_port_t i2c
 #endif
-    ) : m_i2c(i2c) {
+#endif
+    ) :
+#if defined(ARDUINO) || ESP_IDF_VERSION < ESP_IDF_VERSION_VAL(5, 0, 0)
+        m_i2c(i2c)
+#else
+        m_i2c_bus(i2c),
+        m_i2c(nullptr)
+#endif
+    {
 }
 bool bm8563::initialized() const {
     return m_initialized;
@@ -45,9 +56,23 @@ bool bm8563::initialize() {
         }
 #else
         uint8_t buf[] = {0, 0, 0};
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 0)
+        i2c_device_config_t dev_cfg;
+        memset(&dev_cfg,0,sizeof(dev_cfg));
+        dev_cfg.dev_addr_length = I2C_ADDR_BIT_LEN_7;
+        dev_cfg.device_address = address;
+        dev_cfg.scl_speed_hz = 100*1000;
+        if(ESP_OK!=i2c_master_bus_add_device(m_i2c_bus, &dev_cfg, &m_i2c)) {
+            return false;
+        }
+        if(ESP_OK==i2c_master_transmit(m_i2c,buf,sizeof(buf),1000)) {
+            m_initialized = true;
+        }
+#else
         if (ESP_OK == i2c_master_write_to_device(m_i2c, address, buf, sizeof(buf), pdMS_TO_TICKS(1000))) {
             m_initialized = true;
         }
+#endif
 #endif
     }
     return m_initialized;
@@ -94,6 +119,10 @@ void bm8563::now(tm* out_tm) const {
         buf[2] = m_i2c.read();
     }
 #else
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 0)
+    uint8_t tmp = 0x02;
+    i2c_master_transmit_receive(m_i2c,&tmp,1,buf,3,1000);
+#else
     i2c_cmd_handle_t cmd = i2c_cmd_link_create();
     i2c_master_start(cmd);
     i2c_master_write_byte(cmd, (address << 1), ACK_CHECK_EN);
@@ -108,6 +137,7 @@ void bm8563::now(tm* out_tm) const {
     i2c_master_stop(cmd);
     i2c_master_cmd_begin(m_i2c, cmd, pdMS_TO_TICKS(1000));
     i2c_cmd_link_delete(cmd);
+#endif
 #endif
     out_tm->tm_sec = bcd_to_byte(buf[0] & 0x7f);
     out_tm->tm_min = bcd_to_byte(buf[1] & 0x7f);
@@ -125,6 +155,10 @@ void bm8563::now(tm* out_tm) const {
         buf[3] = m_i2c.read();
     }
 #else
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 0)
+    tmp = 0x05;
+    i2c_master_transmit_receive(m_i2c,&tmp,1,buf,sizeof(buf),1000);
+#else
     cmd = i2c_cmd_link_create();
     i2c_master_start(cmd);
     i2c_master_write_byte(cmd, (address << 1), ACK_CHECK_EN);
@@ -139,6 +173,7 @@ void bm8563::now(tm* out_tm) const {
     i2c_master_stop(cmd);
     i2c_master_cmd_begin(m_i2c, cmd, pdMS_TO_TICKS(1000));
     i2c_cmd_link_delete(cmd);
+#endif
 #endif
     out_tm->tm_mday = bcd_to_byte(buf[0] & 0x3f);
     out_tm->tm_wday = bcd_to_byte(buf[1] & 0x07);
@@ -190,7 +225,11 @@ void bm8563::set(const tm& new_tm) {
                     byte_to_bcd(new_tm.tm_min), 
                     byte_to_bcd(new_tm.tm_hour)
     };
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 0)
+    i2c_master_transmit(m_i2c,cmds1,sizeof(cmds1),1000);
+#else
     i2c_master_write_to_device(m_i2c, address, cmds1, sizeof(cmds1), pdMS_TO_TICKS(1000));
+#endif
     uint8_t mon, yr;
     if(new_tm.tm_year<100) {
         mon = byte_to_bcd(new_tm.tm_mon + 1) | 0x80;
@@ -207,7 +246,11 @@ void bm8563::set(const tm& new_tm) {
                     mon,
                     yr
     };
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 0)
+    i2c_master_transmit(m_i2c,cmds2,sizeof(cmds2),1000);
+#else
     i2c_master_write_to_device(m_i2c, address, cmds2, sizeof(cmds2), pdMS_TO_TICKS(1000));
+#endif
 #endif
 }
 void bm8563::set(time_t new_time) {
@@ -316,7 +359,11 @@ void bm8563::reg(uint8_t r, uint8_t value) {
     m_i2c.endTransmission();
 #else
     uint8_t data[] = {r,value};
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 0)
+    i2c_master_transmit(m_i2c,data,sizeof(data),1000);
+#else
     i2c_master_write_to_device(m_i2c,address,data,sizeof(data),pdMS_TO_TICKS(1000));
+#endif
 #endif
 }
 
@@ -329,9 +376,15 @@ uint8_t bm8563::reg(uint8_t r) const {
     return m_i2c.read();
 #else
     uint8_t result;
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 0)
+    if(ESP_OK==i2c_master_transmit_receive(m_i2c,&r,1,&result,1,1000)) {
+        return result;
+    }
+#else
     if(ESP_OK==i2c_master_write_read_device(m_i2c,address,&r,1,&result,1,pdMS_TO_TICKS(1000))) {
         return result;
     }
+#endif
     return 0;
 #endif
 }
